@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>UNDERCOVER Contrôle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Contrôle">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root { --bg:#111; --card:#1d1d1d; --txt:#f4f4f4; --mut:#9a9a9a; --red:#d62839; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family:-apple-system, system-ui, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .screen { height:100%; flex-direction:column; padding:14px; gap:12px; }
+  #lock { display:flex; justify-content:center; align-items:center; text-align:center; }
+  #app { display:none; }
+  h1 { margin:0; font-size:20px; letter-spacing:1px; }
+  h1 span { color:var(--red); }
+  .sub { color:var(--mut); font-size:13px; margin-top:2px; }
+  input#pin { width:100%; max-width:280px; font-size:28px; text-align:center; padding:14px; border-radius:12px; border:2px solid #333; background:var(--card); color:var(--txt); }
+  button { font-size:17px; font-weight:600; padding:14px 18px; border:0; border-radius:12px; background:var(--red); color:#fff; }
+  button.sec { background:#2a2a2a; color:var(--txt); font-size:14px; padding:11px 8px; }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .pill { font-size:12px; font-weight:700; padding:5px 10px; border-radius:20px; }
+  .pill.on { background:#17552b; color:#b8f5cb; }
+  .pill.off { background:#6b3b00; color:#ffd9a3; }
+  .cam { position:relative; flex:1; min-height:200px; background:#000; border-radius:16px; overflow:hidden; }
+  video { width:100%; height:100%; object-fit:cover; }
+  .frame { position:absolute; inset:18% 14%; border:3px solid rgba(255,255,255,.85); border-radius:18px; pointer-events:none; }
+  #hint { position:absolute; left:0; right:0; bottom:8px; text-align:center; font-size:13px; text-shadow:0 1px 3px #000; padding:0 10px; }
+  .stats { display:flex; gap:8px; }
+  .stat { flex:1; background:var(--card); border-radius:12px; padding:10px; text-align:center; }
+  .stat b { display:block; font-size:26px; }
+  .stat small { color:var(--mut); font-size:12px; }
+  .warn { color:#ffb454; font-size:13px; text-align:center; }
+  .okline { color:var(--mut); font-size:13px; text-align:center; }
+  #conflicts { display:none; background:#4a1a1a; border-radius:10px; padding:8px; font-size:12px; }
+  #conflicts button { margin-top:6px; font-size:12px; padding:6px 10px; }
+  .overlay { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:10; }
+  .overlay.ok { background:#12853c; } .overlay.dup { background:#c0262d; } .overlay.unk { background:#d97a00; }
+  .overlay h2 { font-size:34px; margin:0 0 14px; }
+  .overlay .num { font-size:26px; font-weight:700; }
+  .overlay .cat { font-size:22px; margin-top:6px; }
+  .overlay .s { font-size:18px; margin-top:12px; }
+  .overlay .src { font-size:14px; margin-top:12px; opacity:.9; }
+  .overlay .tap { position:absolute; bottom:calc(24px + env(safe-area-inset-bottom)); font-size:14px; opacity:.85; }
+  #lockmsg { min-height:22px; color:#ffb454; }
+</style>
+</head>
+<body>
+<div id="lock" class="screen" style="display:flex">
+  <div style="width:100%">
+    <h1>UNDER<span>COVER</span> SHOWROOM</h1>
+    <div class="sub">Contrôle des billets — 27 novembre 2026</div>
+    <p style="margin:26px 0 12px">Code PIN</p>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••">
+    <p id="lockmsg"></p>
+    <button id="go">Ouvrir</button>
+  </div>
+</div>
+
+<div id="app" class="screen">
+  <div class="top">
+    <div><h1>UNDER<span>COVER</span> SHOWROOM</h1><div class="sub">Contrôle des billets</div></div>
+    <span id="net" class="pill on">EN LIGNE</span>
+  </div>
+  <div class="cam"><video id="video" playsinline muted autoplay></video><div class="frame"></div><div id="hint">Place le QR code dans le cadre</div></div>
+  <div class="stats">
+    <div class="stat"><b id="used">0</b><small>Entrées</small></div>
+    <div class="stat"><b id="left">0</b><small>Restants</small></div>
+    <div class="stat"><b id="total">0</b><small>Total</small></div>
+  </div>
+  <div id="pending" class="okline"></div>
+  <div id="conflicts"><span id="conftext"></span><br><button id="clearconf" class="sec">J'ai vérifié, effacer</button></div>
+  <div class="row">
+    <button id="syncbtn" class="sec">Synchroniser</button>
+    <button id="exportbtn" class="sec">Exporter</button>
+    <button id="lockbtn" class="sec">Verrouiller</button>
+  </div>
+</div>
+
+<div id="overlay" class="overlay">
+  <h2 id="rtitle"></h2>
+  <div id="rnum" class="num"></div>
+  <div id="rcat" class="cat"></div>
+  <div id="rsub" class="s"></div>
+  <div id="rsrc" class="src"></div>
+  <div class="tap">Toucher pour continuer</div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
